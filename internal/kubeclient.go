@@ -192,9 +192,42 @@ func addOwnerLinks(u unstructured.Unstructured, graph *Graph) {
 	}
 }
 
+func (kc *KubeClient) GetProjects(ctx context.Context) ([]Project, error) {
+	items, err := kc.get(ctx, "project.openshift.io", "v1", "projects", "")
+	if err != nil {
+		return nil, err
+	}
+
+	all := []Project{}
+
+	for _, item := range items {
+		metadata := getMap(item.Object, []string{"metadata"})
+		if metadata == nil {
+			continue
+		}
+		name := getString(metadata, []string{"name"})
+		displayName := getString(metadata, []string{"annotations", "openshift.io/display-name"})
+		if name == "" {
+			continue
+		}
+		all = append(all, newProject(name, displayName))
+	}
+
+	return all, nil
+}
+
 func (kc *KubeClient) get(ctx context.Context, g, v, r, namespace string) ([]unstructured.Unstructured, error) {
 	resource := schema.GroupVersionResource{Group: g, Version: v, Resource: r}
-	result, err := kc.dynClient.Resource(resource).Namespace(namespace).List(ctx, v1.ListOptions{})
+
+	var (
+		result *unstructured.UnstructuredList
+		err    error
+	)
+	if namespace == "" {
+		result, err = kc.dynClient.Resource(resource).List(ctx, v1.ListOptions{})
+	} else {
+		result, err = kc.dynClient.Resource(resource).Namespace(namespace).List(ctx, v1.ListOptions{})
+	}
 	if err != nil {
 		return nil, err
 	}

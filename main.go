@@ -24,16 +24,23 @@ var content embed.FS
 
 var client *internal.KubeClient
 
+func projectHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	projects, err := client.GetProjects(context.Background())
+	if err != nil {
+		writeError(w, err.Error())
+		return
+	}
+	writeJSON(w, projects)
+}
+
 func graphHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	graph, err := client.GetAll(context.Background(), "kwkoo-dev")
 	if err != nil {
-		writeJSON(w, struct {
-			Err string `json:"error"`
-		}{
-			Err: err.Error(),
-		})
+		writeError(w, err.Error())
 		return
 	}
 	writeJSON(w, graph)
@@ -82,6 +89,7 @@ func main() {
 	}
 	go func() {
 		log.Printf("listening on port %v", config.Port)
+		http.HandleFunc("/api/projects", projectHandler)
 		http.HandleFunc("/api/graph", graphHandler)
 		http.HandleFunc("/", fileServer)
 		wg.Add(1)
@@ -106,13 +114,6 @@ func main() {
 
 	wg.Wait()
 	log.Print("shutdown successful")
-	/*
-		graph, err := client.GetAll(context.Background(), "kwkoo-dev")
-		if err != nil {
-			log.Fatal(err)
-		}
-		log.Print(graph)
-	*/
 }
 
 func writeJSON(w io.Writer, data interface{}) {
@@ -120,4 +121,12 @@ func writeJSON(w io.Writer, data interface{}) {
 	if err := enc.Encode(data); err != nil {
 		log.Printf("error converting data to JSON: %v", err)
 	}
+}
+
+func writeError(w io.Writer, message string) {
+	writeJSON(w, struct {
+		Err string `json:"error"`
+	}{
+		Err: message,
+	})
 }
