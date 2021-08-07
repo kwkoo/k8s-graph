@@ -2,9 +2,15 @@
 
 ## Todo
 
-1. `replicasets` (`apps/v1`)
+1. `projects` (`project.openshift.io/v1`)
 
-1. `deployments` (`apps/v1`)
+1. project selector
+
+1. loading indicator
+
+1. error screen
+
+1. details screen
 
 1. `configmaps` (`v1`)
 

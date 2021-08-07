@@ -7,7 +7,7 @@ import (
 )
 
 type Node struct {
-	Uid  string `json:"uid"`
+	Uid  string `json:"id"`
 	Kind string `json:"kind"`
 	Name string `json:"name"`
 }
@@ -20,9 +20,8 @@ type Link struct {
 type Graph struct {
 	nodeMap map[string]*Node    // map of uid to node
 	linkMap map[string]struct{} // key is in the form source:target
-	// todo: add links map - source and targets; to avoid adding duplicate links (same source and target)
-	Nodes []*Node `json:"nodes"`
-	Links []Link  `json:"links"`
+	Nodes   []*Node             `json:"nodes"`
+	Links   []Link              `json:"links"`
 }
 
 func InitGraph() *Graph {
@@ -44,12 +43,10 @@ func (g *Graph) addNode(uid, kind, name string) {
 	g.Nodes = append(g.Nodes, &n)
 }
 
-/*
 func (g *Graph) nodeExists(uid string) bool {
 	_, ok := g.nodeMap[uid]
 	return ok
 }
-*/
 
 func (g *Graph) addLink(source, target string) {
 	if g.linkExists(source, target) {
@@ -61,6 +58,19 @@ func (g *Graph) addLink(source, target string) {
 	}
 	g.Links = append(g.Links, l)
 	g.linkMap[source+":"+target] = struct{}{}
+}
+
+func (g *Graph) cleanLinks() {
+	cleaned := []Link{}
+
+	for _, link := range g.Links {
+		if !g.nodeExists(link.Source) || !g.nodeExists(link.Target) {
+			delete(g.linkMap, link.Source+":"+link.Target)
+			continue
+		}
+		cleaned = append(cleaned, link)
+	}
+	g.Links = cleaned
 }
 
 func (g *Graph) linkExists(source, target string) bool {

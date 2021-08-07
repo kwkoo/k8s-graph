@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -49,11 +50,104 @@ func InitKubeClient(masterurl, kubeconfig string) (*KubeClient, error) {
 
 func (kc *KubeClient) GetAll(ctx context.Context, namespace string) (Graph, error) {
 	graph := InitGraph()
+
+	if err := kc.GetBuildConfigs(ctx, graph, namespace); err != nil {
+		return *graph, err
+	}
+
+	if err := kc.GetBuilds(ctx, graph, namespace); err != nil {
+		return *graph, err
+	}
+
+	if err := kc.GetDeployments(ctx, graph, namespace); err != nil {
+		return *graph, err
+	}
+
+	if err := kc.GetReplicaSets(ctx, graph, namespace); err != nil {
+		return *graph, err
+	}
+
 	if err := kc.GetPods(ctx, graph, namespace); err != nil {
 		return *graph, err
 	}
 
+	// todo: services, routes
+
+	// this is needed because d3.js doesn't like links pointing to nodes that
+	// don't exist
+	graph.cleanLinks()
+
 	return *graph, nil
+}
+
+func (kc *KubeClient) GetBuildConfigs(ctx context.Context, graph *Graph, namespace string) error {
+	items, err := kc.get(ctx, "build.openshift.io", "v1", "buildconfigs", namespace)
+	if err != nil {
+		return err
+	}
+
+	for _, item := range items {
+		graph.addNode(string(item.GetUID()), "buildconfig", item.GetName())
+		addOwnerLinks(item, graph)
+	}
+
+	return nil
+}
+
+func (kc *KubeClient) GetBuilds(ctx context.Context, graph *Graph, namespace string) error {
+	items, err := kc.get(ctx, "build.openshift.io", "v1", "builds", namespace)
+	if err != nil {
+		return err
+	}
+
+	for _, item := range items {
+		graph.addNode(string(item.GetUID()), "build", item.GetName())
+		addOwnerLinks(item, graph)
+
+		imageDigest := getString(item.Object, []string{"status", "output", "to", "imageDigest"})
+		if imageDigest == "" {
+			continue
+		}
+		colon := strings.LastIndex(imageDigest, ":")
+		var uid string
+		if colon == -1 {
+			uid = imageDigest
+		} else {
+			uid = imageDigest[colon+1:]
+		}
+		graph.addNode(uid, "image", imageDigest)
+		graph.addLink(string(item.GetUID()), uid)
+	}
+
+	return nil
+}
+
+func (kc *KubeClient) GetDeployments(ctx context.Context, graph *Graph, namespace string) error {
+	items, err := kc.get(ctx, "apps", "v1", "deployments", namespace)
+	if err != nil {
+		return err
+	}
+
+	for _, item := range items {
+		graph.addNode(string(item.GetUID()), "deployment", item.GetName())
+		addOwnerLinks(item, graph)
+	}
+
+	return nil
+}
+
+func (kc *KubeClient) GetReplicaSets(ctx context.Context, graph *Graph, namespace string) error {
+	items, err := kc.get(ctx, "apps", "v1", "replicasets", namespace)
+	if err != nil {
+		return err
+	}
+
+	for _, item := range items {
+		graph.addNode(string(item.GetUID()), "replicaset", item.GetName())
+		addOwnerLinks(item, graph)
+	}
+
+	return nil
 }
 
 func (kc *KubeClient) GetPods(ctx context.Context, graph *Graph, namespace string) error {
@@ -64,12 +158,38 @@ func (kc *KubeClient) GetPods(ctx context.Context, graph *Graph, namespace strin
 
 	for _, item := range items {
 		graph.addNode(string(item.GetUID()), "pod", item.GetName())
-		for _, owner := range getOwners(item) {
-			graph.addLink(owner, string(item.GetUID()))
+		addOwnerLinks(item, graph)
+
+		// check if we need to link to container images
+		containers := getList(item.Object, []string{"spec", "containers"})
+		if len(containers) > 0 {
+			for _, c := range containers {
+				cm, ok := c.(map[string]interface{})
+				if !ok {
+					continue
+				}
+				image := getString(cm, []string{"image"})
+				if image == "" {
+					continue
+				}
+				sep := strings.LastIndex(image, "@sha256:")
+				if sep == -1 {
+					continue
+				}
+				graph.addLink(string(item.GetUID()), image[sep+len("@sha256:"):])
+			}
 		}
-		// todo: process pod - container images, pvcs, configmaps, secrets
+
+		// todo: process pod - pvcs, configmaps, secrets
 	}
+
 	return nil
+}
+
+func addOwnerLinks(u unstructured.Unstructured, graph *Graph) {
+	for _, owner := range getOwners(u) {
+		graph.addLink(owner, string(u.GetUID()))
+	}
 }
 
 func (kc *KubeClient) get(ctx context.Context, g, v, r, namespace string) ([]unstructured.Unstructured, error) {
@@ -79,43 +199,4 @@ func (kc *KubeClient) get(ctx context.Context, g, v, r, namespace string) ([]uns
 		return nil, err
 	}
 	return result.Items, nil
-}
-
-func getOwners(u unstructured.Unstructured) []string {
-	m, ok := u.Object["metadata"]
-	if !ok {
-		return nil
-	}
-
-	metadata, ok := m.(map[string]interface{})
-	if !ok {
-		return nil
-	}
-	or, ok := metadata["ownerReferences"]
-	if !ok {
-		return nil
-	}
-	ownerReferences, ok := or.([]interface{})
-	if !ok {
-		return nil
-	}
-
-	owners := []string{}
-	for _, o := range ownerReferences {
-		owner, ok := o.(map[string]interface{})
-		if !ok {
-			continue
-		}
-		ou, ok := owner["uid"]
-		if !ok {
-			continue
-		}
-		uid, ok := ou.(string)
-		if !ok {
-			continue
-		}
-		owners = append(owners, uid)
-	}
-
-	return owners
 }
