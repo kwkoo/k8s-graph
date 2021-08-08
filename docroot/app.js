@@ -149,9 +149,9 @@ var app = new Vue({
                 })
                 .on("click", this.selectNode)
                 .call(d3.drag()
-                    .on("start", this.dragstarted)
+                    .on("start", this.dragStarted)
                     .on("drag", this.dragged)
-                    .on("end", this.dragended))
+                    .on("end", this.dragEnded))
         
             this.main.textElements = this.main.g.append("g")
                 .attr("class", "texts")
@@ -211,7 +211,7 @@ var app = new Vue({
             console.log(d)
         },
 
-        dragstarted: function(d) {
+        dragStarted: function(d) {
             if (!d3.event.active) this.main.simulation.alphaTarget(0.3).restart()
             d.fx = d.x
             d.fy = d.y
@@ -222,7 +222,7 @@ var app = new Vue({
             d.fy = d3.event.y
         },
 
-        dragended: function(d) {
+        dragEnded: function(d) {
             if (!d3.event.active) this.main.simulation.alphaTarget(0)
             d.fx = null
             d.fy = null

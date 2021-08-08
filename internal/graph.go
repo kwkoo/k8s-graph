@@ -3,6 +3,7 @@ package internal
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"log"
 )
 
@@ -19,6 +20,7 @@ type Link struct {
 
 type Graph struct {
 	nodeMap     map[string]*Node    // map of uid to node
+	nameMap     map[string]*Node    // map of name to node
 	linkMap     map[string]struct{} // key is in the form source:target
 	linkSources map[string]struct{} // key is the source uid
 	linkTargets map[string]struct{} // key is the target uid
@@ -29,6 +31,7 @@ type Graph struct {
 func InitGraph() *Graph {
 	graph := Graph{
 		nodeMap:     make(map[string]*Node),
+		nameMap:     make(map[string]*Node),
 		linkMap:     map[string]struct{}{},
 		linkSources: map[string]struct{}{},
 		linkTargets: map[string]struct{}{},
@@ -46,6 +49,7 @@ func (g *Graph) addNode(uid, kind, name string) {
 		Name: name,
 	}
 	g.nodeMap[uid] = &n
+	g.nameMap[nodeTitle(kind, name)] = &n
 	g.Nodes = append(g.Nodes, &n)
 }
 
@@ -63,7 +67,7 @@ func (g *Graph) addLink(source, target string) {
 		Target: target,
 	}
 	g.Links = append(g.Links, l)
-	g.linkMap[source+":"+target] = struct{}{}
+	g.linkMap[linkMapKey(source, target)] = struct{}{}
 	g.linkSources[source] = struct{}{}
 	g.linkTargets[target] = struct{}{}
 }
@@ -73,7 +77,7 @@ func (g *Graph) cleanLinks() {
 
 	for _, link := range g.Links {
 		if !g.nodeExists(link.Source) || !g.nodeExists(link.Target) {
-			delete(g.linkMap, link.Source+":"+link.Target)
+			delete(g.linkMap, linkMapKey(link.Source, link.Target))
 			delete(g.linkSources, link.Source)
 			delete(g.linkTargets, link.Target)
 			continue
@@ -97,6 +101,7 @@ func (g *Graph) cleanNodes() {
 					// this node is a cm or secret and is not linked to
 					// anything else
 					delete(g.nodeMap, node.Uid)
+					delete(g.nameMap, nodeTitle(node.Kind, node.Name))
 					continue
 				}
 			}
@@ -107,18 +112,16 @@ func (g *Graph) cleanNodes() {
 }
 
 func (g *Graph) linkExists(source, target string) bool {
-	_, ok := g.linkMap[source+":"+target]
+	_, ok := g.linkMap[linkMapKey(source, target)]
 	return ok
 }
 
 func (g *Graph) findResource(kind, name string) string {
-	for _, node := range g.Nodes {
-		if node.Kind == kind && node.Name == name {
-			return node.Uid
-		}
+	node, ok := g.nameMap[nodeTitle(kind, name)]
+	if !ok {
+		return ""
 	}
-
-	return ""
+	return node.Uid
 }
 
 func (g Graph) String() string {
@@ -128,4 +131,12 @@ func (g Graph) String() string {
 		log.Fatal(err)
 	}
 	return b.String()
+}
+
+func linkMapKey(source, target string) string {
+	return fmt.Sprintf("%s:%s", source, target)
+}
+
+func nodeTitle(kind, name string) string {
+	return fmt.Sprintf("%s/%s", kind, name)
 }

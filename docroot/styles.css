@@ -1,20 +1,25 @@
 .title {
-    text-align: center;
-    font-size: 50px;
-    font-family: sans-serif;
-    clear: right;
+  text-align: center;
+  font-size: 50px;
+  font-family: sans-serif;
+  clear: right;
 }
 
 .subtitle {
-    text-align: center;
-    font-size: 20px;
-    font-family: sans-serif;
+  text-align: center;
+  font-size: 20px;
+  font-family: sans-serif;
+}
+
+select {
+  font-family: sans-serif;
+  font-size: 1.2em;
 }
 
 .center {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .links line {

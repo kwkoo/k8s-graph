@@ -1,18 +1,30 @@
 # Graph
 
+This is a web application that shows you the relationships between various resources deployed in an OpenShift project.
+
+It uses the Kubernetes Go client in the backend, and [D3.js](https://d3js.org) and [Vue.js](https://vuejs.org) in the frontend.
+
+![Screen Recording](images/graph.gif)
+
+
+## Installation
+
+To install this on OpenShift,
+
+1. Edit `Makefile` and set the `PROJECT` variable to the namespace you want to this deploy to
+
+1. Login as an administrator using the `oc` CLI
+
+1. Run `make deploy`
+
+
 ## Todo
 
 1. details screen
 
 1. `configmaps` and `secrets` used in the `environment` in pod containers
 
-
-# Build
-
-* `.status.output.to.imageDigest` set to `sha256:f6867f9cc7db9d27bad2b8af06f40f344a7014f4552152cc574670b76bc778d8`
-* `.status.outputDockerImageReference` set to `image-registry.openshift-image-registry.svc:5000/kwkoo-dev/snake:latest`
-* should create `Image` object with name `sha256:f6867f9cc7db9d27bad2b8af06f40f344a7014f4552152cc574670b76bc778d8` (equates to `ImageStreamTag`'s `.image.metadata.name`)
-* in pod, `.spec.containers[0].image` set to `image-registry.openshift-image-registry.svc:5000/kwkoo-dev/snake@sha256:f6867f9cc7db9d27bad2b8af06f40f344a7014f4552152cc574670b76bc778d8`
+1. `StatefulSets` and `DaemonSets`
 
 
 ## Resources
