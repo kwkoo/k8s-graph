@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -38,7 +39,13 @@ func projectHandler(w http.ResponseWriter, r *http.Request) {
 func graphHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	graph, err := client.GetAll(context.Background(), "kwkoo-dev")
+	slash := strings.LastIndex(r.URL.Path, "/")
+	if slash == -1 {
+		writeError(w, "invalid URI - expecting namespace name")
+		return
+	}
+	namespace := r.URL.Path[slash+1:]
+	graph, err := client.GetAll(context.Background(), namespace)
 	if err != nil {
 		writeError(w, err.Error())
 		return
@@ -90,7 +97,7 @@ func main() {
 	go func() {
 		log.Printf("listening on port %v", config.Port)
 		http.HandleFunc("/api/projects", projectHandler)
-		http.HandleFunc("/api/graph", graphHandler)
+		http.HandleFunc("/api/graph/", graphHandler)
 		http.HandleFunc("/", fileServer)
 		wg.Add(1)
 		defer wg.Done()

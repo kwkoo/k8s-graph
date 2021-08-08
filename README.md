@@ -2,21 +2,9 @@
 
 ## Todo
 
-1. `projects` (`project.openshift.io/v1`)
-
-1. project selector
-
-1. loading indicator
-
-1. error screen
-
 1. details screen
 
-1. `configmaps` (`v1`)
-
-1. `secrets` (`v1`)
-
-1. `persistentvolumeclaims` (`v1`)
+1. `configmaps` and `secrets` used in the `environment` in pod containers
 
 
 # Build

@@ -11,24 +11,58 @@ var app = new Vue({
     data: {
         screen: 'loading',
         main: {
+            projects: [],
             graph: { "nodes": [], "links": [] },
             svg: {},
             width: 0,
             height: 0,
-            g: '',
+            g: {},
             simulation: {},
             linkElements: [],
             nodeElements: [],
             textElements: []
         },
+        error: { message: '' },
     },
 
     mounted: function() {
-        // todo: initiate call to load projects
         this.initGraph()
+        this.loadProjects()
     },
 
     methods: {
+        showError: function(message) {
+            this.error.message = message
+            this.screen = 'error'
+        },
+
+        loadProjects: function() {
+            let that = this
+
+            d3.json("/api/projects", function(error, data) {
+                if (error) {
+                    this.showError(error)
+                    return
+                }
+                if (data.error) {
+                    this.showError(data.error)
+                    return
+                }
+
+                that.main.projects = data
+                that.screen = 'main'
+            })
+        },
+
+        // copied from https://renatello.com/dynamic-drop-down-list-in-vue-js/
+        selectProject: function(event) {
+            let selectedIndex = event.target.options.selectedIndex - 1
+            let selectedProject = this.main.projects[selectedIndex].name
+
+            this.screen = 'loading'
+            this.getGraphData(selectedProject)
+        },
+
         initGraph: function() {
             let that = this
 
@@ -39,18 +73,25 @@ var app = new Vue({
 
             this.main.width = +this.main.svg.attr("width"),
             this.main.height = +this.main.svg.attr("height")
-
-            this.getGraphData('dummy')
         },
 
-        getGraphData: function(namespace) { // todo: currently unused
+        getGraphData: function(namespace) {
             let that = this
 
-            d3.json("/api/graph", function(error, data) {
-                // todo: check for error here
-                if (error) throw error;
+            d3.selectAll("text").remove()
+            d3.selectAll("line").remove()
+            d3.selectAll("circle").remove()
 
-                // todo: check for data.error
+            d3.json("/api/graph/" + namespace, function(error, data) {
+                if (error) {
+                    this.showError(error)
+                    return
+                }
+
+                if (data.error) {
+                    this.showError(data.error)
+                    return
+                }
             
                 that.main.graph = data;
 
@@ -71,6 +112,8 @@ var app = new Vue({
 
                 that.main.simulation.nodes(that.main.graph.nodes).on("tick", that.ticked)
                 that.main.simulation.force("link").links(that.main.graph.links)
+
+                that.screen = 'main'
             })
         },
 
@@ -117,9 +160,9 @@ var app = new Vue({
                 .enter().append("text")
                 .attr("text-anchor", "end")
                 .text(function (node) {
-                    let label = node.kind + "/" + node.name;
-                    if (label.length > maxLabelLength) label = label.substring(0, maxLabelLength - 3) + "...";
-                    return label;
+                    let label = node.kind + "/" + node.name
+                    if (label.length > maxLabelLength) label = label.substring(0, maxLabelLength - 3) + "..."
+                    return label
                 })
                 .attr("font-size", 55)
                 .attr("font-family", "sans-serif")

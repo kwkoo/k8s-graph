@@ -51,6 +51,18 @@ func InitKubeClient(masterurl, kubeconfig string) (*KubeClient, error) {
 func (kc *KubeClient) GetAll(ctx context.Context, namespace string) (Graph, error) {
 	graph := InitGraph()
 
+	if err := kc.GetConfigMaps(ctx, graph, namespace); err != nil {
+		return *graph, err
+	}
+
+	if err := kc.GetSecrets(ctx, graph, namespace); err != nil {
+		return *graph, err
+	}
+
+	if err := kc.GetPersistentVolumeClaims(ctx, graph, namespace); err != nil {
+		return *graph, err
+	}
+
 	if err := kc.GetBuildConfigs(ctx, graph, namespace); err != nil {
 		return *graph, err
 	}
@@ -76,6 +88,8 @@ func (kc *KubeClient) GetAll(ctx context.Context, namespace string) (Graph, erro
 	// this is needed because d3.js doesn't like links pointing to nodes that
 	// don't exist
 	graph.cleanLinks()
+
+	graph.cleanNodes()
 
 	return *graph, nil
 }
@@ -104,7 +118,7 @@ func (kc *KubeClient) GetBuilds(ctx context.Context, graph *Graph, namespace str
 		graph.addNode(string(item.GetUID()), "build", item.GetName())
 		addOwnerLinks(item, graph)
 
-		imageDigest := getString(item.Object, []string{"status", "output", "to", "imageDigest"})
+		imageDigest := getString(item.Object, "status", "output", "to", "imageDigest")
 		if imageDigest == "" {
 			continue
 		}
@@ -161,14 +175,14 @@ func (kc *KubeClient) GetPods(ctx context.Context, graph *Graph, namespace strin
 		addOwnerLinks(item, graph)
 
 		// check if we need to link to container images
-		containers := getList(item.Object, []string{"spec", "containers"})
+		containers := getList(item.Object, "spec", "containers")
 		if len(containers) > 0 {
 			for _, c := range containers {
 				cm, ok := c.(map[string]interface{})
 				if !ok {
 					continue
 				}
-				image := getString(cm, []string{"image"})
+				image := getString(cm, "image")
 				if image == "" {
 					continue
 				}
@@ -177,10 +191,49 @@ func (kc *KubeClient) GetPods(ctx context.Context, graph *Graph, namespace strin
 					continue
 				}
 				graph.addLink(string(item.GetUID()), image[sep+len("@sha256:"):])
+
+				// todo: check if we need to link configmaps or secrets used
+				// in the environment
 			}
 		}
 
-		// todo: process pod - pvcs, configmaps, secrets
+		volumes := getList(item.Object, "spec", "volumes")
+		if len(volumes) > 0 {
+			for _, v := range volumes {
+				volume, ok := v.(map[string]interface{})
+				if !ok {
+					continue
+				}
+				claimName := getString(volume, "persistentVolumeClaim", "claimName")
+				if claimName != "" {
+					claimUid := graph.findResource("pvc", claimName)
+					if claimUid == "" {
+						continue
+					}
+					graph.addLink(string(item.GetUID()), claimUid)
+					continue
+				}
+				cmName := getString(volume, "configMap", "name")
+				if cmName != "" {
+					cmUid := graph.findResource("cm", cmName)
+					if cmUid == "" {
+						continue
+					}
+					graph.addLink(string(item.GetUID()), cmUid)
+					continue
+				}
+				secretName := getString(volume, "secret", "secretName")
+				if secretName != "" {
+					secretUid := graph.findResource("secret", secretName)
+					if secretUid == "" {
+						continue
+					}
+					graph.addLink(string(item.GetUID()), secretUid)
+					continue
+				}
+
+			}
+		}
 	}
 
 	return nil
@@ -192,6 +245,45 @@ func addOwnerLinks(u unstructured.Unstructured, graph *Graph) {
 	}
 }
 
+func (kc *KubeClient) GetPersistentVolumeClaims(ctx context.Context, graph *Graph, namespace string) error {
+	items, err := kc.get(ctx, "", "v1", "persistentvolumeclaims", namespace)
+	if err != nil {
+		return err
+	}
+
+	for _, item := range items {
+		graph.addNode(string(item.GetUID()), "pvc", item.GetName())
+	}
+
+	return nil
+}
+
+func (kc *KubeClient) GetConfigMaps(ctx context.Context, graph *Graph, namespace string) error {
+	items, err := kc.get(ctx, "", "v1", "configmaps", namespace)
+	if err != nil {
+		return err
+	}
+
+	for _, item := range items {
+		graph.addNode(string(item.GetUID()), "cm", item.GetName())
+	}
+
+	return nil
+}
+
+func (kc *KubeClient) GetSecrets(ctx context.Context, graph *Graph, namespace string) error {
+	items, err := kc.get(ctx, "", "v1", "secrets", namespace)
+	if err != nil {
+		return err
+	}
+
+	for _, item := range items {
+		graph.addNode(string(item.GetUID()), "secret", item.GetName())
+	}
+
+	return nil
+}
+
 func (kc *KubeClient) GetProjects(ctx context.Context) ([]Project, error) {
 	items, err := kc.get(ctx, "project.openshift.io", "v1", "projects", "")
 	if err != nil {
@@ -201,12 +293,12 @@ func (kc *KubeClient) GetProjects(ctx context.Context) ([]Project, error) {
 	all := []Project{}
 
 	for _, item := range items {
-		metadata := getMap(item.Object, []string{"metadata"})
+		metadata := getMap(item.Object, "metadata")
 		if metadata == nil {
 			continue
 		}
-		name := getString(metadata, []string{"name"})
-		displayName := getString(metadata, []string{"annotations", "openshift.io/display-name"})
+		name := getString(metadata, "name")
+		displayName := getString(metadata, "annotations", "openshift.io/display-name")
 		if name == "" {
 			continue
 		}

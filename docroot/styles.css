@@ -1,3 +1,22 @@
+.title {
+    text-align: center;
+    font-size: 50px;
+    font-family: sans-serif;
+    clear: right;
+}
+
+.subtitle {
+    text-align: center;
+    font-size: 20px;
+    font-family: sans-serif;
+}
+
+.center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .links line {
   stroke: #999;
   stroke-opacity: 0.6;
