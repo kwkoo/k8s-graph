@@ -94,6 +94,13 @@ var app = new Vue({
                     that.showError(data.error)
                     return
                 }
+
+                if (data.nodes) {
+                    data.nodes.forEach(node => {
+                        if (node.object && node.object.metadata && node.object.metadata.managedFields)
+                            delete node.object.metadata.managedFields
+                    })
+                }
             
                 that.main.graph = data;
 
@@ -230,9 +237,6 @@ var app = new Vue({
             if (!d.object) {
                 return
             }
-
-            if (d.object && d.object.metadata && d.object.metadata.managedFields)
-                delete d.object.metadata.managedFields
 
             this.overlay.text = JSON.stringify(d.object, null, 2)
             this.overlay.show = true
