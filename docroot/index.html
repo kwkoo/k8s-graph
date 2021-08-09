@@ -32,6 +32,12 @@
     <div v-show="screen === 'error'">
       <h2 class="subtitle">{{ error.message }}</h2>
     </div>
+
+    <!-- overlay -->
+    <div class="overlay" v-show="overlay.show">
+      <button class="close-button" v-on:click="hideOverlay()"><image src="closebutton.svg" width="20" height="20"></button>
+      <textarea class="node-details" ref="nodedetails" readonly>{{ overlay.text }}</textarea>
+    </div>
   </div>
   <script src="app.js"></script>
 </body>

@@ -113,7 +113,7 @@ func (kc *KubeClient) GetBuildConfigs(ctx context.Context, graph *Graph, namespa
 	}
 
 	for _, item := range items {
-		graph.addNode(string(item.GetUID()), "buildconfig", item.GetName())
+		graph.addNode(string(item.GetUID()), "buildconfig", item.GetName(), item.Object)
 		addOwnerLinks(item, graph)
 	}
 
@@ -127,7 +127,7 @@ func (kc *KubeClient) GetBuilds(ctx context.Context, graph *Graph, namespace str
 	}
 
 	for _, item := range items {
-		graph.addNode(string(item.GetUID()), "build", item.GetName())
+		graph.addNode(string(item.GetUID()), "build", item.GetName(), item.Object)
 		addOwnerLinks(item, graph)
 
 		imageDigest := getString(item.Object, "status", "output", "to", "imageDigest")
@@ -141,7 +141,7 @@ func (kc *KubeClient) GetBuilds(ctx context.Context, graph *Graph, namespace str
 		} else {
 			uid = imageDigest[colon+1:]
 		}
-		graph.addNode(uid, "image", imageDigest)
+		graph.addNode(uid, "image", imageDigest, nil)
 		graph.addLink(string(item.GetUID()), uid)
 	}
 
@@ -155,7 +155,7 @@ func (kc *KubeClient) GetDeployments(ctx context.Context, graph *Graph, namespac
 	}
 
 	for _, item := range items {
-		graph.addNode(string(item.GetUID()), "deployment", item.GetName())
+		graph.addNode(string(item.GetUID()), "deployment", item.GetName(), item.Object)
 		addOwnerLinks(item, graph)
 	}
 
@@ -169,7 +169,7 @@ func (kc *KubeClient) GetStatefulSets(ctx context.Context, graph *Graph, namespa
 	}
 
 	for _, item := range items {
-		graph.addNode(string(item.GetUID()), "sts", item.GetName())
+		graph.addNode(string(item.GetUID()), "sts", item.GetName(), item.Object)
 		addOwnerLinks(item, graph)
 	}
 
@@ -183,7 +183,7 @@ func (kc *KubeClient) GetDaemonSets(ctx context.Context, graph *Graph, namespace
 	}
 
 	for _, item := range items {
-		graph.addNode(string(item.GetUID()), "ds", item.GetName())
+		graph.addNode(string(item.GetUID()), "ds", item.GetName(), item.Object)
 		addOwnerLinks(item, graph)
 	}
 
@@ -197,7 +197,7 @@ func (kc *KubeClient) GetReplicaSets(ctx context.Context, graph *Graph, namespac
 	}
 
 	for _, item := range items {
-		graph.addNode(string(item.GetUID()), "replicaset", item.GetName())
+		graph.addNode(string(item.GetUID()), "replicaset", item.GetName(), item.Object)
 		addOwnerLinks(item, graph)
 	}
 
@@ -211,7 +211,7 @@ func (kc *KubeClient) GetPods(ctx context.Context, graph *Graph, namespace strin
 	}
 
 	for _, item := range items {
-		graph.addNode(string(item.GetUID()), "pod", item.GetName())
+		graph.addNode(string(item.GetUID()), "pod", item.GetName(), item.Object)
 		addOwnerLinks(item, graph)
 
 		// check if we need to link to container images
@@ -292,7 +292,7 @@ func (kc *KubeClient) GetPersistentVolumeClaims(ctx context.Context, graph *Grap
 	}
 
 	for _, item := range items {
-		graph.addNode(string(item.GetUID()), "pvc", item.GetName())
+		graph.addNode(string(item.GetUID()), "pvc", item.GetName(), item.Object)
 	}
 
 	return nil
@@ -305,7 +305,7 @@ func (kc *KubeClient) GetConfigMaps(ctx context.Context, graph *Graph, namespace
 	}
 
 	for _, item := range items {
-		graph.addNode(string(item.GetUID()), "cm", item.GetName())
+		graph.addNode(string(item.GetUID()), "cm", item.GetName(), item.Object)
 	}
 
 	return nil
@@ -318,7 +318,7 @@ func (kc *KubeClient) GetSecrets(ctx context.Context, graph *Graph, namespace st
 	}
 
 	for _, item := range items {
-		graph.addNode(string(item.GetUID()), "secret", item.GetName())
+		graph.addNode(string(item.GetUID()), "secret", item.GetName(), item.Object)
 	}
 
 	return nil

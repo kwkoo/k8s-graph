@@ -8,9 +8,10 @@ import (
 )
 
 type Node struct {
-	Uid  string `json:"id"`
-	Kind string `json:"kind"`
-	Name string `json:"name"`
+	Uid    string                 `json:"id"`
+	Kind   string                 `json:"kind"`
+	Name   string                 `json:"name"`
+	Object map[string]interface{} `json:"object"`
 }
 
 type Link struct {
@@ -42,11 +43,12 @@ func InitGraph() *Graph {
 	return &graph
 }
 
-func (g *Graph) addNode(uid, kind, name string) {
+func (g *Graph) addNode(uid, kind, name string, obj map[string]interface{}) {
 	n := Node{
-		Uid:  uid,
-		Kind: kind,
-		Name: name,
+		Uid:    uid,
+		Kind:   kind,
+		Name:   name,
+		Object: obj,
 	}
 	g.nodeMap[uid] = &n
 	g.nameMap[nodeTitle(kind, name)] = &n

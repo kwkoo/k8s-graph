@@ -55,3 +55,46 @@ select {
 text {
   font-size: 10px;
 }
+
+.overlay {
+  border-radius: 10px;
+  position: fixed;
+  width: 95%;
+  height: 95%;
+  margin: auto;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0,0,0,0.75);
+  z-index: 2;
+}
+
+.close-button {
+  background-color: transparent;
+  outline: none;
+  border: none;
+  position: absolute;
+  top: 5px;
+  right: 5px;
+}
+
+.node-details {
+  position: fixed;
+  width: 90%;
+  height: 90%;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: auto;
+  background-color: transparent;
+  color: white;
+  font-family: monospace;
+  border: none;
+  resize: none;
+}
+
+textarea::-webkit-scrollbar-track {
+  background-color: transparent;
+}

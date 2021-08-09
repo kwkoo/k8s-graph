@@ -24,6 +24,7 @@ var app = new Vue({
             textElements: []
         },
         error: { message: '' },
+        overlay: { show: false, text: '' },
     },
 
     mounted: function() {
@@ -210,10 +211,6 @@ var app = new Vue({
                 })
         },
 
-        selectNode: function(d) {
-            console.log(d)
-        },
-
         dragStarted: function(d) {
             if (!d3.event.active) this.main.simulation.alphaTarget(0.3).restart()
             d.fx = d.x
@@ -229,6 +226,21 @@ var app = new Vue({
             if (!d3.event.active) this.main.simulation.alphaTarget(0)
             d.fx = null
             d.fy = null
+        },
+
+        selectNode: function(d) {
+            if (!d.object) {
+                return
+            } else {
+                this.overlay.text = JSON.stringify(d.object, null, 2)
+            }
+            this.overlay.show = true
+            this.$nextTick(() => this.$refs["nodedetails"].scrollTop = 0 )
+        },
+
+        hideOverlay: function() {
+            this.overlay.text = ''
+            this.overlay.show = false
         },
     }
 })
