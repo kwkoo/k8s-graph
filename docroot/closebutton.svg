@@ -141,4 +141,4 @@
   }, false);
   //]]>
 }
-          )();</script><defs/><g><ellipse cx="41" cy="41" rx="40" ry="40" fill="none" stroke="#ffffff" stroke-width="2" pointer-events="all"/><path d="M 16 66 L 66 16" fill="none" stroke="#ffffff" stroke-width="2" stroke-miterlimit="10" pointer-events="stroke"/><path d="M 66 66 L 16 16" fill="none" stroke="#ffffff" stroke-width="2" stroke-miterlimit="10" pointer-events="stroke"/></g></svg>
+          )();</script><defs/><g><ellipse cx="41" cy="41" rx="40" ry="40" fill="none" stroke="#ffffff" stroke-width="5" pointer-events="all"/><path d="M 21 61 L 61 21" fill="none" stroke="#ffffff" stroke-width="5" stroke-miterlimit="10" pointer-events="stroke"/><path d="M 61 61 L 21 21" fill="none" stroke="#ffffff" stroke-width="5" stroke-miterlimit="10" pointer-events="stroke"/></g></svg>
