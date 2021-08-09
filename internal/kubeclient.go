@@ -15,10 +15,11 @@ import (
 )
 
 type KubeClient struct {
+	openShift bool
 	dynClient dynamic.Interface
 }
 
-func InitKubeClient(masterurl, kubeconfig string) (*KubeClient, error) {
+func InitKubeClient(masterurl, kubeconfig string, openShift bool) (*KubeClient, error) {
 	var (
 		cfg *rest.Config
 		err error
@@ -44,6 +45,7 @@ func InitKubeClient(masterurl, kubeconfig string) (*KubeClient, error) {
 	}
 
 	return &KubeClient{
+		openShift: openShift,
 		dynClient: dynClient,
 	}, nil
 }
@@ -63,12 +65,14 @@ func (kc *KubeClient) GetAll(ctx context.Context, namespace string) (Graph, erro
 		return *graph, err
 	}
 
-	if err := kc.GetBuildConfigs(ctx, graph, namespace); err != nil {
-		return *graph, err
-	}
+	if kc.openShift {
+		if err := kc.GetBuildConfigs(ctx, graph, namespace); err != nil {
+			return *graph, err
+		}
 
-	if err := kc.GetBuilds(ctx, graph, namespace); err != nil {
-		return *graph, err
+		if err := kc.GetBuilds(ctx, graph, namespace); err != nil {
+			return *graph, err
+		}
 	}
 
 	if err := kc.GetDeployments(ctx, graph, namespace); err != nil {
@@ -285,6 +289,12 @@ func (kc *KubeClient) GetSecrets(ctx context.Context, graph *Graph, namespace st
 }
 
 func (kc *KubeClient) GetProjects(ctx context.Context) ([]Project, error) {
+	if !kc.openShift {
+		// get namespaces
+		return kc.getNamespaces(ctx)
+	}
+
+	// running against OpenShift
 	items, err := kc.get(ctx, "project.openshift.io", "v1", "projects", "")
 	if err != nil {
 		return nil, err
@@ -299,6 +309,30 @@ func (kc *KubeClient) GetProjects(ctx context.Context) ([]Project, error) {
 		}
 		name := getString(metadata, "name")
 		displayName := getString(metadata, "annotations", "openshift.io/display-name")
+		if name == "" {
+			continue
+		}
+		all = append(all, newProject(name, displayName))
+	}
+
+	return all, nil
+}
+
+func (kc *KubeClient) getNamespaces(ctx context.Context) ([]Project, error) {
+	items, err := kc.get(ctx, "", "v1", "namespaces", "")
+	if err != nil {
+		return nil, err
+	}
+
+	all := []Project{}
+
+	for _, item := range items {
+		metadata := getMap(item.Object, "metadata")
+		if metadata == nil {
+			continue
+		}
+		name := getString(metadata, "name")
+		displayName := getString(metadata, "labels", "kubernetes.io/metadata.name")
 		if name == "" {
 			continue
 		}

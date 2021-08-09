@@ -41,11 +41,11 @@ var app = new Vue({
 
             d3.json("/api/projects", function(error, data) {
                 if (error) {
-                    this.showError(error)
+                    that.showError(error)
                     return
                 }
                 if (data.error) {
-                    this.showError(data.error)
+                    that.showError(data.error)
                     return
                 }
 

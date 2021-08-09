@@ -1,15 +1,15 @@
-#MASTERURL="https://api.sandbox.x8i5.p1.openshiftapps.com:6443"
-MASTERURL="https://api.cluster-ee7c.ee7c.sandbox1471.opentlc.com:6443/"
-KUBECONFIG="/Users/kwkoo/.kube/config"
+MASTERURL="https://192.168.254.10:6443"
+KUBECONFIG="$(HOME)/.kube/config"
+OPENSHIFT="false"
 IMAGENAME="ghcr.io/kwkoo/k8s-graph"
 PROJECT="graph"
 VERSION="0.1"
 BASE:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 
-.PHONY: run image deploy clean
+.PHONY: run image deploy clean deploy-k8s clean-k8s
 
 run:
-	@MASTERURL="$(MASTERURL)" KUBECONFIG="$(KUBECONFIG)" DOCROOT="$(BASE)/docroot" go run main.go
+	@MASTERURL="$(MASTERURL)" KUBECONFIG="$(KUBECONFIG)" OPENSHIFT="$(OPENSHIFT)" DOCROOT="$(BASE)/docroot" go run main.go
 
 image:
 	docker build --rm -t $(IMAGENAME):$(VERSION) $(BASE)
@@ -23,3 +23,9 @@ deploy:
 
 clean:
 	cat $(BASE)/yaml/openshift.yaml | sed 's|#PROJ#|$(PROJECT)|g' | oc delete -f -
+
+deploy-k8s:
+	cat $(BASE)/yaml/k8s.yaml | sed 's|#PROJ#|$(PROJECT)|g' | KUBECONFIG=$(KUBECONFIG) kubectl apply -f -
+
+clean-k8s:
+	cat $(BASE)/yaml/k8s.yaml | sed 's|#PROJ#|$(PROJECT)|g' | KUBECONFIG=$(KUBECONFIG) kubectl delete -f -

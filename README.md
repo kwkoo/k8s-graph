@@ -17,6 +17,16 @@ To install this on OpenShift,
 
 1. Run `make deploy`
 
+To deploy this on non-OpenShift Kubernetes,
+
+1. Edit `Makefile` and set the `PROJECT` variable to the namespace you want to this deploy to
+
+1. Set the `KUBECONFIG` variable to point to your kubeconfig
+
+1. Edit `yaml/k8s.yaml` and set the service `nodePort` to the relevant value
+
+1. Run `make deploy-k8s` - a NodePort service is configured to listen on port 30080
+
 
 ## Todo
 
