@@ -79,6 +79,14 @@ func (kc *KubeClient) GetAll(ctx context.Context, namespace string) (Graph, erro
 		return *graph, err
 	}
 
+	if err := kc.GetStatefulSets(ctx, graph, namespace); err != nil {
+		return *graph, err
+	}
+
+	if err := kc.GetDaemonSets(ctx, graph, namespace); err != nil {
+		return *graph, err
+	}
+
 	if err := kc.GetReplicaSets(ctx, graph, namespace); err != nil {
 		return *graph, err
 	}
@@ -148,6 +156,34 @@ func (kc *KubeClient) GetDeployments(ctx context.Context, graph *Graph, namespac
 
 	for _, item := range items {
 		graph.addNode(string(item.GetUID()), "deployment", item.GetName())
+		addOwnerLinks(item, graph)
+	}
+
+	return nil
+}
+
+func (kc *KubeClient) GetStatefulSets(ctx context.Context, graph *Graph, namespace string) error {
+	items, err := kc.get(ctx, "apps", "v1", "statefulsets", namespace)
+	if err != nil {
+		return err
+	}
+
+	for _, item := range items {
+		graph.addNode(string(item.GetUID()), "sts", item.GetName())
+		addOwnerLinks(item, graph)
+	}
+
+	return nil
+}
+
+func (kc *KubeClient) GetDaemonSets(ctx context.Context, graph *Graph, namespace string) error {
+	items, err := kc.get(ctx, "apps", "v1", "daemonsets", namespace)
+	if err != nil {
+		return err
+	}
+
+	for _, item := range items {
+		graph.addNode(string(item.GetUID()), "ds", item.GetName())
 		addOwnerLinks(item, graph)
 	}
 
