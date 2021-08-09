@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<html>
 <!-- Copied from https://stackoverflow.com/a/60634123 -->
 
 <head>
@@ -18,14 +18,14 @@
     </div>
 
     <!-- main panel where the graph resides -->
-    <div>
+    <div class="main">
       <div>
         <select class="form-control" v-show="screen != 'loading'" v-on:change="selectProject($event)">
           <option value="" selected disabled>Select Project</option>
           <option v-for="project in main.projects" :value="project.name" :key="project.name">{{ (project.displayname != null && project.displayname.length > 0)?project.displayname:project.name }}</option>
         </select>
       </div>
-      <svg width="1024" height="1024"></svg>
+      <svg></svg>
     </div>
 
     <!-- error panel -->
@@ -35,3 +35,4 @@
   </div>
   <script src="app.js"></script>
 </body>
+</html>

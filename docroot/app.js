@@ -2,6 +2,7 @@ const radius = 20
 const repellingStrength = -50
 const linkLength = 100
 const maxLabelLength = 25
+const labelYOffset = 40
 
 var color = d3.scaleOrdinal(d3.schemeCategory10)
 
@@ -71,8 +72,10 @@ var app = new Vue({
                     that.main.svg.attr("transform", d3.event.transform)
                 }))
 
-            this.main.width = +this.main.svg.attr("width"),
-            this.main.height = +this.main.svg.attr("height")
+            //this.main.width = +this.main.svg.attr("width"),
+            //this.main.height = +this.main.svg.attr("height")
+            this.main.width = +this.main.svg.node().getBoundingClientRect().width
+            this.main.height = +this.main.svg.node().getBoundingClientRect().height
         },
 
         getGraphData: function(namespace) {
@@ -168,7 +171,7 @@ var app = new Vue({
                 .attr("font-family", "sans-serif")
                 .attr("fill", "black")
                 .attr("style", "font-weight:bold;")
-                .attr("dy", 40) // vertical position of text
+                .attr("dy", labelYOffset) // vertical position of text
                 .attr("text-anchor", "middle")
         },
 
@@ -193,7 +196,7 @@ var app = new Vue({
                     return d.x = Math.max(radius, Math.min(that.main.width - radius, d.x))
                 })
                 .attr("cy", function (d) {
-                    return d.y = Math.max(radius, Math.min(that.main.height - radius, d.y))
+                    return d.y = Math.max(radius, Math.min(that.main.height - radius - labelYOffset, d.y))
                 })
                 .each(d => {
                     d3.select('#t_' + d.id).attr('x', d.x + 10).attr('y', d.y + 3)
