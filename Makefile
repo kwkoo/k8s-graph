@@ -1,6 +1,5 @@
 MASTERURL="https://192.168.254.10:6443"
-#KUBECONFIG="$(HOME)/.kube/config"
-KUBECONFIG="$(HOME)/Downloads/k8s-self-healing/kubeadm.kubeconfig"
+KUBECONFIG="$(HOME)/.kube/config"
 OPENSHIFT="false"
 IMAGENAME="ghcr.io/kwkoo/k8s-graph"
 PROJECT="graph"

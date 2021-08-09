@@ -16,6 +16,8 @@ rules:
   resources:
   - deployments
   - replicasets
+  - statefulsets
+  - daemonsets
   verbs:
   - list
 - apiGroups:

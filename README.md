@@ -30,11 +30,7 @@ To deploy this on non-OpenShift Kubernetes,
 
 ## Todo
 
-1. details screen
-
 1. `configmaps` and `secrets` used in the `environment` in pod containers
-
-1. `StatefulSets` and `DaemonSets`
 
 
 ## Resources

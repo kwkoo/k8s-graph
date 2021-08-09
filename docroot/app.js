@@ -73,8 +73,6 @@ var app = new Vue({
                     that.main.svg.attr("transform", d3.event.transform)
                 }))
 
-            //this.main.width = +this.main.svg.attr("width"),
-            //this.main.height = +this.main.svg.attr("height")
             this.main.width = +this.main.svg.node().getBoundingClientRect().width
             this.main.height = +this.main.svg.node().getBoundingClientRect().height
         },
@@ -88,12 +86,12 @@ var app = new Vue({
 
             d3.json("/api/graph/" + namespace, function(error, data) {
                 if (error) {
-                    this.showError(error)
+                    that.showError(error)
                     return
                 }
 
                 if (data.error) {
-                    this.showError(data.error)
+                    that.showError(data.error)
                     return
                 }
             
@@ -231,9 +229,12 @@ var app = new Vue({
         selectNode: function(d) {
             if (!d.object) {
                 return
-            } else {
-                this.overlay.text = JSON.stringify(d.object, null, 2)
             }
+
+            if (d.object && d.object.metadata && d.object.metadata.managedFields)
+                delete d.object.metadata.managedFields
+
+            this.overlay.text = JSON.stringify(d.object, null, 2)
             this.overlay.show = true
             this.$nextTick(() => this.$refs["nodedetails"].scrollTop = 0 )
         },
