@@ -2,9 +2,9 @@ package internal
 
 import "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-func getOwners(u unstructured.Unstructured) []string {
+func unstructGetOwners(u unstructured.Unstructured) []string {
 	owners := []string{}
-	for _, o := range getList(u.Object, "metadata", "ownerReferences") {
+	for _, o := range unstructGetList(u.Object, "metadata", "ownerReferences") {
 		if o == nil {
 			continue
 		}
@@ -12,14 +12,14 @@ func getOwners(u unstructured.Unstructured) []string {
 		if !ok {
 			continue
 		}
-		uid := getString(owner, "uid")
+		uid := unstructGetString(owner, "uid")
 		owners = append(owners, uid)
 	}
 
 	return owners
 }
 
-func getMap(m map[string]interface{}, path ...string) map[string]interface{} {
+func unstructGetMap(m map[string]interface{}, path ...string) map[string]interface{} {
 	for _, branch := range path {
 		next, ok := m[branch]
 		if !ok {
@@ -34,12 +34,12 @@ func getMap(m map[string]interface{}, path ...string) map[string]interface{} {
 	return m
 }
 
-func getString(m map[string]interface{}, path ...string) string {
+func unstructGetString(m map[string]interface{}, path ...string) string {
 	if len(path) == 0 {
 		return ""
 	}
 	if len(path) > 1 {
-		m = getMap(m, path[:len(path)-1]...)
+		m = unstructGetMap(m, path[:len(path)-1]...)
 		if m == nil {
 			return ""
 		}
@@ -55,12 +55,12 @@ func getString(m map[string]interface{}, path ...string) string {
 	return val
 }
 
-func getList(m map[string]interface{}, path ...string) []interface{} {
+func unstructGetList(m map[string]interface{}, path ...string) []interface{} {
 	if len(path) == 0 {
 		return nil
 	}
 	if len(path) > 1 {
-		m = getMap(m, path[:len(path)-1]...)
+		m = unstructGetMap(m, path[:len(path)-1]...)
 		if m == nil {
 			return nil
 		}

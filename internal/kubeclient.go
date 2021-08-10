@@ -130,7 +130,7 @@ func (kc *KubeClient) GetBuilds(ctx context.Context, graph *Graph, namespace str
 		graph.addNode(string(item.GetUID()), "build", item.GetName(), item.Object)
 		addOwnerLinks(item, graph)
 
-		imageDigest := getString(item.Object, "status", "output", "to", "imageDigest")
+		imageDigest := unstructGetString(item.Object, "status", "output", "to", "imageDigest")
 		if imageDigest == "" {
 			continue
 		}
@@ -211,18 +211,20 @@ func (kc *KubeClient) GetPods(ctx context.Context, graph *Graph, namespace strin
 	}
 
 	for _, item := range items {
-		graph.addNode(string(item.GetUID()), "pod", item.GetName(), item.Object)
+		podid := string(item.GetUID())
+
+		graph.addNode(podid, "pod", item.GetName(), item.Object)
 		addOwnerLinks(item, graph)
 
 		// check if we need to link to container images
-		containers := getList(item.Object, "spec", "containers")
+		containers := unstructGetList(item.Object, "spec", "containers")
 		if len(containers) > 0 {
 			for _, c := range containers {
 				cm, ok := c.(map[string]interface{})
 				if !ok {
 					continue
 				}
-				image := getString(cm, "image")
+				image := unstructGetString(cm, "image")
 				if image == "" {
 					continue
 				}
@@ -230,45 +232,110 @@ func (kc *KubeClient) GetPods(ctx context.Context, graph *Graph, namespace strin
 				if sep == -1 {
 					continue
 				}
-				graph.addLink(string(item.GetUID()), image[sep+len("@sha256:"):])
+				graph.addLink(podid, image[sep+len("@sha256:"):])
 
-				// todo: check if we need to link configmaps or secrets used
-				// in the environment
+				// check for .spec.containers[*].envFrom
+				ef := unstructGetList(cm, "envFrom")
+				if len(ef) > 0 {
+					for _, efitem := range ef {
+						efitemmap, ok := efitem.(map[string]interface{})
+						if !ok {
+							continue
+						}
+
+						// check for .spec.containers[*].envFrom[*].configMapRef.name
+						cmName := unstructGetString(efitemmap, "configMapRef", "name")
+						if cmName != "" {
+							uid := graph.findResource("cm", cmName)
+							if uid == "" {
+								continue
+							}
+							graph.addLink(podid, uid)
+						} else {
+							// check for .spec.containers[*].envFrom[*].secretRef.name
+							secretName := unstructGetString(efitemmap, "secretRef", "name")
+							if secretName != "" {
+								uid := graph.findResource("secret", secretName)
+								if uid == "" {
+									continue
+								}
+								graph.addLink(podid, uid)
+							}
+						}
+					}
+				}
+
+				// check for .spec.containers[*].env
+				env := unstructGetList(cm, "env")
+				if len(env) > 0 {
+					for _, envItem := range env {
+						envMap, ok := envItem.(map[string]interface{})
+						if !ok {
+							continue
+						}
+
+						// check for .spec.containers[*].env[*].valueFrom
+						vf := unstructGetMap(envMap, "valueFrom")
+						if vf == nil {
+							continue
+						}
+
+						// check for .spec.containers[*].env[*].valueFrom.configMapKeyRef.name
+						cmName := unstructGetString(vf, "configMapKeyRef", "name")
+						if cmName != "" {
+							uid := graph.findResource("cm", cmName)
+							if uid == "" {
+								continue
+							}
+							graph.addLink(podid, uid)
+						} else {
+							// check for .spec.containers[*].env[*].valueFrom.secretKeyRef.name
+							secretName := unstructGetString(vf, "secretKeyRef", "name")
+							if secretName != "" {
+								uid := graph.findResource("secret", secretName)
+								if uid == "" {
+									continue
+								}
+								graph.addLink(podid, uid)
+							}
+						}
+					}
+				}
 			}
 		}
 
-		volumes := getList(item.Object, "spec", "volumes")
+		volumes := unstructGetList(item.Object, "spec", "volumes")
 		if len(volumes) > 0 {
 			for _, v := range volumes {
 				volume, ok := v.(map[string]interface{})
 				if !ok {
 					continue
 				}
-				claimName := getString(volume, "persistentVolumeClaim", "claimName")
+				claimName := unstructGetString(volume, "persistentVolumeClaim", "claimName")
 				if claimName != "" {
 					claimUid := graph.findResource("pvc", claimName)
 					if claimUid == "" {
 						continue
 					}
-					graph.addLink(string(item.GetUID()), claimUid)
+					graph.addLink(podid, claimUid)
 					continue
 				}
-				cmName := getString(volume, "configMap", "name")
+				cmName := unstructGetString(volume, "configMap", "name")
 				if cmName != "" {
 					cmUid := graph.findResource("cm", cmName)
 					if cmUid == "" {
 						continue
 					}
-					graph.addLink(string(item.GetUID()), cmUid)
+					graph.addLink(podid, cmUid)
 					continue
 				}
-				secretName := getString(volume, "secret", "secretName")
+				secretName := unstructGetString(volume, "secret", "secretName")
 				if secretName != "" {
 					secretUid := graph.findResource("secret", secretName)
 					if secretUid == "" {
 						continue
 					}
-					graph.addLink(string(item.GetUID()), secretUid)
+					graph.addLink(podid, secretUid)
 					continue
 				}
 
@@ -280,7 +347,7 @@ func (kc *KubeClient) GetPods(ctx context.Context, graph *Graph, namespace strin
 }
 
 func addOwnerLinks(u unstructured.Unstructured, graph *Graph) {
-	for _, owner := range getOwners(u) {
+	for _, owner := range unstructGetOwners(u) {
 		graph.addLink(owner, string(u.GetUID()))
 	}
 }
@@ -339,12 +406,12 @@ func (kc *KubeClient) GetProjects(ctx context.Context) ([]Project, error) {
 	all := []Project{}
 
 	for _, item := range items {
-		metadata := getMap(item.Object, "metadata")
+		metadata := unstructGetMap(item.Object, "metadata")
 		if metadata == nil {
 			continue
 		}
-		name := getString(metadata, "name")
-		displayName := getString(metadata, "annotations", "openshift.io/display-name")
+		name := unstructGetString(metadata, "name")
+		displayName := unstructGetString(metadata, "annotations", "openshift.io/display-name")
 		if name == "" {
 			continue
 		}
@@ -363,12 +430,12 @@ func (kc *KubeClient) getNamespaces(ctx context.Context) ([]Project, error) {
 	all := []Project{}
 
 	for _, item := range items {
-		metadata := getMap(item.Object, "metadata")
+		metadata := unstructGetMap(item.Object, "metadata")
 		if metadata == nil {
 			continue
 		}
-		name := getString(metadata, "name")
-		displayName := getString(metadata, "labels", "kubernetes.io/metadata.name")
+		name := unstructGetString(metadata, "name")
+		displayName := unstructGetString(metadata, "labels", "kubernetes.io/metadata.name")
 		if name == "" {
 			continue
 		}

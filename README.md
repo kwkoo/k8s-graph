@@ -28,11 +28,6 @@ To deploy this on non-OpenShift Kubernetes,
 1. Run `make deploy-k8s` - a NodePort service is configured to listen on port 30080
 
 
-## Todo
-
-1. `configmaps` and `secrets` used in the `environment` in pod containers
-
-
 ## Resources
 
 * [Unstructured docs](https://pkg.go.dev/k8s.io/apimachinery/pkg/apis/meta/v1/unstructured#Unstructured)
