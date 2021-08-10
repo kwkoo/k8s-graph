@@ -7,6 +7,11 @@ It uses the Kubernetes Go client in the backend, and [D3.js](https://d3js.org) a
 ![Screen Recording](images/graph.gif)
 
 
+## Todo
+
+* `CronJob` and `Job` support
+
+
 ## Installation
 
 To install this on OpenShift,

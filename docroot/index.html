@@ -20,10 +20,11 @@
     <!-- main panel where the graph resides -->
     <div class="main">
       <div>
-        <select class="form-control" v-show="screen != 'loading'" v-on:change="selectProject($event)">
+        <select class="form-control" ref="projectSelect" v-show="screen != 'loading'" v-on:change="selectProject($event)">
           <option value="" selected disabled>Select Project</option>
           <option v-for="project in main.projects" :value="project.name" :key="project.name">{{ (project.displayname != null && project.displayname.length > 0)?project.displayname:project.name }}</option>
         </select>
+        <button v-show="showReload" v-on:click="reload()">Reload</button>
       </div>
       <svg></svg>
     </div>

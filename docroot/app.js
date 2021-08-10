@@ -23,6 +23,7 @@ var app = new Vue({
             nodeElements: [],
             textElements: []
         },
+        showReload: false,
         error: { message: '' },
         overlay: { show: false, text: '' },
     },
@@ -61,7 +62,15 @@ var app = new Vue({
             let selectedIndex = event.target.options.selectedIndex - 1
             let selectedProject = this.main.projects[selectedIndex].name
 
-            this.screen = 'loading'
+            this.getGraphData(selectedProject)
+        },
+
+        reload: function() {
+            let selectedIndex = this.$refs["projectSelect"].options.selectedIndex - 1
+            if (selectedIndex < 0) return
+
+            let selectedProject = this.main.projects[selectedIndex].name
+
             this.getGraphData(selectedProject)
         },
 
@@ -78,6 +87,8 @@ var app = new Vue({
         },
 
         getGraphData: function(namespace) {
+            this.reloadProject = false
+            this.screen = 'loading'
             let that = this
 
             d3.selectAll("text").remove()
@@ -122,6 +133,7 @@ var app = new Vue({
                 that.main.simulation.nodes(that.main.graph.nodes).on("tick", that.ticked)
                 that.main.simulation.force("link").links(that.main.graph.links)
 
+                that.showReload = true
                 that.screen = 'main'
             })
         },
