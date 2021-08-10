@@ -2,7 +2,7 @@ const radius = 20
 const repellingStrength = -50
 const linkLength = 100
 const maxLabelLength = 25
-const labelYOffset = 40
+const labelYOffset = 30
 
 var color = d3.scaleOrdinal(d3.schemeCategory10)
 

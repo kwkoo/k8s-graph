@@ -65,6 +65,14 @@ func (kc *KubeClient) GetAll(ctx context.Context, namespace string) (Graph, erro
 		return *graph, err
 	}
 
+	if err := kc.GetCronJobs(ctx, graph, namespace); err != nil {
+		return *graph, err
+	}
+
+	if err := kc.GetJobs(ctx, graph, namespace); err != nil {
+		return *graph, err
+	}
+
 	if kc.openShift {
 		if err := kc.GetBuildConfigs(ctx, graph, namespace); err != nil {
 			return *graph, err
@@ -104,6 +112,34 @@ func (kc *KubeClient) GetAll(ctx context.Context, namespace string) (Graph, erro
 	graph.cleanNodes()
 
 	return *graph, nil
+}
+
+func (kc *KubeClient) GetCronJobs(ctx context.Context, graph *Graph, namespace string) error {
+	items, err := kc.get(ctx, "batch", "v1beta1", "cronjobs", namespace)
+	if err != nil {
+		return err
+	}
+
+	for _, item := range items {
+		graph.addNode(string(item.GetUID()), "cj", item.GetName(), item.Object)
+		addOwnerLinks(item, graph)
+	}
+
+	return nil
+}
+
+func (kc *KubeClient) GetJobs(ctx context.Context, graph *Graph, namespace string) error {
+	items, err := kc.get(ctx, "batch", "v1", "jobs", namespace)
+	if err != nil {
+		return err
+	}
+
+	for _, item := range items {
+		graph.addNode(string(item.GetUID()), "job", item.GetName(), item.Object)
+		addOwnerLinks(item, graph)
+	}
+
+	return nil
 }
 
 func (kc *KubeClient) GetBuildConfigs(ctx context.Context, graph *Graph, namespace string) error {

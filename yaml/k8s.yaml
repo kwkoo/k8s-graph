@@ -35,6 +35,13 @@ rules:
   - namespaces
   verbs:
   - list
+- apiGroups:
+  - batch
+  resources:
+  - cronjobs
+  - jobs
+  verbs:
+  - list
 ---
 apiVersion: v1
 kind: ServiceAccount
