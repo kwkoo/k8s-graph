@@ -54,53 +54,61 @@ func (kc *KubeClient) GetAll(ctx context.Context, namespace string) (Graph, erro
 	graph := InitGraph()
 
 	if err := kc.GetConfigMaps(ctx, graph, namespace); err != nil {
-		return *graph, err
+		log.Printf("error getting ConfigMaps: %v", err)
 	}
 
 	if err := kc.GetSecrets(ctx, graph, namespace); err != nil {
-		return *graph, err
+		log.Printf("error getting Secrets: %v", err)
 	}
 
 	if err := kc.GetPersistentVolumeClaims(ctx, graph, namespace); err != nil {
-		return *graph, err
+		log.Printf("error getting PersistentVolumeClaims: %v", err)
 	}
 
 	if err := kc.GetCronJobs(ctx, graph, namespace); err != nil {
-		return *graph, err
+		log.Printf("error getting CronJobs: %v", err)
 	}
 
 	if err := kc.GetJobs(ctx, graph, namespace); err != nil {
-		return *graph, err
+		log.Printf("error getting Jobs: %v", err)
 	}
 
 	if kc.openShift {
+		if err := kc.GetDeploymentConfigs(ctx, graph, namespace); err != nil {
+			log.Printf("error getting DeploymentConfigs: %v", err)
+		}
+
 		if err := kc.GetBuildConfigs(ctx, graph, namespace); err != nil {
-			return *graph, err
+			log.Printf("error getting BuildConfigs: %v", err)
 		}
 
 		if err := kc.GetBuilds(ctx, graph, namespace); err != nil {
-			return *graph, err
+			log.Printf("error getting Builds: %v", err)
 		}
 	}
 
 	if err := kc.GetDeployments(ctx, graph, namespace); err != nil {
-		return *graph, err
+		log.Printf("error getting Deployments: %v", err)
 	}
 
 	if err := kc.GetStatefulSets(ctx, graph, namespace); err != nil {
-		return *graph, err
+		log.Printf("error getting StatefulSets: %v", err)
 	}
 
 	if err := kc.GetDaemonSets(ctx, graph, namespace); err != nil {
-		return *graph, err
+		log.Printf("error getting DaemonSets: %v", err)
 	}
 
 	if err := kc.GetReplicaSets(ctx, graph, namespace); err != nil {
-		return *graph, err
+		log.Printf("error getting ReplicaSets: %v", err)
+	}
+
+	if err := kc.GetReplicationControllers(ctx, graph, namespace); err != nil {
+		log.Printf("error getting ReplicationControllers: %v", err)
 	}
 
 	if err := kc.GetPods(ctx, graph, namespace); err != nil {
-		return *graph, err
+		log.Printf("error getting Pods: %v", err)
 	}
 
 	// todo: services, routes
@@ -184,6 +192,20 @@ func (kc *KubeClient) GetBuilds(ctx context.Context, graph *Graph, namespace str
 	return nil
 }
 
+func (kc *KubeClient) GetDeploymentConfigs(ctx context.Context, graph *Graph, namespace string) error {
+	items, err := kc.get(ctx, "apps.openshift.io", "v1", "deploymentconfigs", namespace)
+	if err != nil {
+		return err
+	}
+
+	for _, item := range items {
+		graph.addNode(string(item.GetUID()), "dc", item.GetName(), item.Object)
+		addOwnerLinks(item, graph)
+	}
+
+	return nil
+}
+
 func (kc *KubeClient) GetDeployments(ctx context.Context, graph *Graph, namespace string) error {
 	items, err := kc.get(ctx, "apps", "v1", "deployments", namespace)
 	if err != nil {
@@ -234,6 +256,20 @@ func (kc *KubeClient) GetReplicaSets(ctx context.Context, graph *Graph, namespac
 
 	for _, item := range items {
 		graph.addNode(string(item.GetUID()), "replicaset", item.GetName(), item.Object)
+		addOwnerLinks(item, graph)
+	}
+
+	return nil
+}
+
+func (kc *KubeClient) GetReplicationControllers(ctx context.Context, graph *Graph, namespace string) error {
+	items, err := kc.get(ctx, "", "v1", "replicationcontrollers", namespace)
+	if err != nil {
+		return err
+	}
+
+	for _, item := range items {
+		graph.addNode(string(item.GetUID()), "rc", item.GetName(), item.Object)
 		addOwnerLinks(item, graph)
 	}
 

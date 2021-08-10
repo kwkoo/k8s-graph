@@ -27,6 +27,7 @@ rules:
   - persistentvolumeclaims
   - pods
   - secrets
+  - replicationcontrollers
   verbs:
   - list
 - apiGroups:

@@ -19,6 +19,12 @@ rules:
   verbs:
   - list
 - apiGroups:
+  - apps.openshift.io
+  resources:
+  - deploymentconfigs
+  verbs:
+  - list
+- apiGroups:
   - apps
   resources:
   - deployments
@@ -34,6 +40,7 @@ rules:
   - persistentvolumeclaims
   - pods
   - secrets
+  - replicationcontrollers
   verbs:
   - list
 - apiGroups:
