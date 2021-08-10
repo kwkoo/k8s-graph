@@ -22,7 +22,7 @@
       <div>
         <select class="form-control" ref="projectSelect" v-show="screen != 'loading'" v-on:change="selectProject($event)">
           <option value="" selected disabled>Select Project</option>
-          <option v-for="project in main.projects" :value="project.name" :key="project.name">{{ (project.displayname != null && project.displayname.length > 0)?project.displayname:project.name }}</option>
+          <option v-for="project in main.projects" v-bind:value="project.name" v-bind:key="project.name">{{ (project.displayname != null && project.displayname.length > 0)?project.displayname:project.name }}</option>
         </select>
         <button v-show="showReload" v-on:click="reload()">Reload</button>
       </div>
