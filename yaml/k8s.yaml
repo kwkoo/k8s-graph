@@ -28,6 +28,7 @@ rules:
   - pods
   - secrets
   - replicationcontrollers
+  - services
   verbs:
   - list
 - apiGroups:
@@ -41,6 +42,12 @@ rules:
   resources:
   - cronjobs
   - jobs
+  verbs:
+  - list
+- apiGroups:
+  - discovery.k8s.io
+  resources:
+  - endpointslices
   verbs:
   - list
 ---

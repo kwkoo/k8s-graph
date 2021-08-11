@@ -73,18 +73,16 @@ func (kc *KubeClient) GetAll(ctx context.Context, namespace string) (Graph, erro
 		log.Printf("error getting Jobs: %v", err)
 	}
 
-	if kc.openShift {
-		if err := kc.GetDeploymentConfigs(ctx, graph, namespace); err != nil {
-			log.Printf("error getting DeploymentConfigs: %v", err)
-		}
+	if err := kc.GetDeploymentConfigs(ctx, graph, namespace); err != nil {
+		log.Printf("error getting DeploymentConfigs: %v", err)
+	}
 
-		if err := kc.GetBuildConfigs(ctx, graph, namespace); err != nil {
-			log.Printf("error getting BuildConfigs: %v", err)
-		}
+	if err := kc.GetBuildConfigs(ctx, graph, namespace); err != nil {
+		log.Printf("error getting BuildConfigs: %v", err)
+	}
 
-		if err := kc.GetBuilds(ctx, graph, namespace); err != nil {
-			log.Printf("error getting Builds: %v", err)
-		}
+	if err := kc.GetBuilds(ctx, graph, namespace); err != nil {
+		log.Printf("error getting Builds: %v", err)
 	}
 
 	if err := kc.GetDeployments(ctx, graph, namespace); err != nil {
@@ -111,7 +109,17 @@ func (kc *KubeClient) GetAll(ctx context.Context, namespace string) (Graph, erro
 		log.Printf("error getting Pods: %v", err)
 	}
 
-	// todo: services, routes
+	if err := kc.GetServices(ctx, graph, namespace); err != nil {
+		log.Printf("error getting Services: %v", err)
+	}
+
+	if err := kc.GetRoutes(ctx, graph, namespace); err != nil {
+		log.Printf("error getting Routes: %v", err)
+	}
+
+	if err := kc.GetEndpointSlices(ctx, graph, namespace); err != nil {
+		log.Printf("error getting EndpointSlices: %v", err)
+	}
 
 	// this is needed because d3.js doesn't like links pointing to nodes that
 	// don't exist
@@ -151,6 +159,9 @@ func (kc *KubeClient) GetJobs(ctx context.Context, graph *Graph, namespace strin
 }
 
 func (kc *KubeClient) GetBuildConfigs(ctx context.Context, graph *Graph, namespace string) error {
+	if !kc.openShift {
+		return nil
+	}
 	items, err := kc.get(ctx, "build.openshift.io", "v1", "buildconfigs", namespace)
 	if err != nil {
 		return err
@@ -165,6 +176,9 @@ func (kc *KubeClient) GetBuildConfigs(ctx context.Context, graph *Graph, namespa
 }
 
 func (kc *KubeClient) GetBuilds(ctx context.Context, graph *Graph, namespace string) error {
+	if !kc.openShift {
+		return nil
+	}
 	items, err := kc.get(ctx, "build.openshift.io", "v1", "builds", namespace)
 	if err != nil {
 		return err
@@ -193,6 +207,9 @@ func (kc *KubeClient) GetBuilds(ctx context.Context, graph *Graph, namespace str
 }
 
 func (kc *KubeClient) GetDeploymentConfigs(ctx context.Context, graph *Graph, namespace string) error {
+	if !kc.openShift {
+		return nil
+	}
 	items, err := kc.get(ctx, "apps.openshift.io", "v1", "deploymentconfigs", namespace)
 	if err != nil {
 		return err
@@ -458,6 +475,117 @@ func (kc *KubeClient) GetSecrets(ctx context.Context, graph *Graph, namespace st
 
 	for _, item := range items {
 		graph.addNode(string(item.GetUID()), "secret", item.GetName(), item.Object)
+	}
+
+	return nil
+}
+
+func (kc *KubeClient) GetServices(ctx context.Context, graph *Graph, namespace string) error {
+	items, err := kc.get(ctx, "", "v1", "services", namespace)
+	if err != nil {
+		return err
+	}
+
+	for _, item := range items {
+		graph.addNode(string(item.GetUID()), "svc", item.GetName(), item.Object)
+		addOwnerLinks(item, graph)
+	}
+
+	return nil
+}
+
+func (kc *KubeClient) GetRoutes(ctx context.Context, graph *Graph, namespace string) error {
+	if !kc.openShift {
+		return nil
+	}
+	items, err := kc.get(ctx, "route.openshift.io", "v1", "routes", namespace)
+	if err != nil {
+		return err
+	}
+
+	for _, item := range items {
+		uid := string(item.GetUID())
+		graph.addNode(uid, "route", item.GetName(), item.Object)
+		addOwnerLinks(item, graph)
+
+		to := unstructGetMap(item.Object, "spec", "to")
+		if to != nil {
+			kind := unstructGetString(to, "kind")
+			if kind == "Service" {
+				name := unstructGetString(to, "name")
+				if name != "" {
+					svcuid := graph.findResource("svc", name)
+					if svcuid != "" {
+						graph.addLink(uid, svcuid)
+					}
+				}
+			}
+		}
+
+		altBackends := unstructGetList(item.Object, "spec", "alternateBackends")
+		if len(altBackends) > 0 {
+			for _, b := range altBackends {
+				backend, ok := b.(map[string]interface{})
+				if !ok {
+					continue
+				}
+				kind := unstructGetString(backend, "kind")
+				if kind != "Service" {
+					continue
+				}
+				name := unstructGetString(backend, "name")
+				if name == "" {
+					continue
+				}
+				svcuid := graph.findResource("svc", name)
+				if svcuid == "" {
+					continue
+				}
+				graph.addLink(uid, svcuid)
+			}
+		}
+	}
+
+	return nil
+}
+
+func (kc *KubeClient) GetEndpointSlices(ctx context.Context, graph *Graph, namespace string) error {
+	items, err := kc.get(ctx, "discovery.k8s.io", "v1beta1", "endpointslices", namespace)
+	if err != nil {
+		return err
+	}
+
+	for _, item := range items {
+		esuid := string(item.GetUID())
+		graph.addNode(esuid, "endpointslice", item.GetName(), item.Object)
+		addOwnerLinks(item, graph)
+
+		endpoints := unstructGetList(item.Object, "endpoints")
+		if len(endpoints) > 0 {
+			for _, e := range endpoints {
+				endpoint, ok := e.(map[string]interface{})
+				if !ok {
+					continue
+				}
+				targetRef := unstructGetMap(endpoint, "targetRef")
+				if targetRef == nil {
+					continue
+				}
+				kind := unstructGetString(targetRef, "kind")
+				if kind != "Pod" {
+					continue
+				}
+				podName := unstructGetString(targetRef, "name")
+				if podName == "" {
+					continue
+				}
+				poduid := graph.findResource("pod", podName)
+				if poduid == "" {
+					continue
+				}
+				graph.addLink(esuid, poduid)
+			}
+		}
 	}
 
 	return nil
