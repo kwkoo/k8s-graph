@@ -97,9 +97,6 @@ spec:
         name: k8s-graph
         ports:
         - containerPort: 8080
-        env:
-        - name: OPENSHIFT
-          value: "false"
         resources: {}
 status: {}
 ---

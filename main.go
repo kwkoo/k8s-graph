@@ -59,7 +59,6 @@ func main() {
 		Docroot    string `usage:"HTML document root - will use the embedded docroot if not specified"`
 		MasterURL  string `usage:"Kubernetes master URL - will use the in-cluster config if not specified"`
 		Kubeconfig string `usage:"Path to the kubeconfig file - will use the in-cluster config if not specified"`
-		OpenShift  bool   `default:"true" usage:"Set this to false if running against non-OpenShift Kubernetes"`
 	}{}
 	if err := configparser.Parse(&config); err != nil {
 		log.Fatal(err)
@@ -82,7 +81,7 @@ func main() {
 	fileServer := http.FileServer(filesystem).ServeHTTP
 
 	var err error
-	client, err = internal.InitKubeClient(config.MasterURL, config.Kubeconfig, config.OpenShift)
+	client, err = internal.InitKubeClient(config.MasterURL, config.Kubeconfig)
 	if err != nil {
 		log.Fatal(err)
 	}

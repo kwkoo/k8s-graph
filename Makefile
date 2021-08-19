@@ -1,6 +1,5 @@
 MASTERURL="https://192.168.254.10:6443"
 KUBECONFIG="$(HOME)/.kube/config"
-OPENSHIFT="false"
 IMAGENAME="ghcr.io/kwkoo/k8s-graph"
 PROJECT="graph"
 VERSION="0.1"
@@ -9,7 +8,7 @@ BASE:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 .PHONY: run image deploy clean deploy-k8s clean-k8s
 
 run:
-	@MASTERURL="$(MASTERURL)" KUBECONFIG="$(KUBECONFIG)" OPENSHIFT="$(OPENSHIFT)" DOCROOT="$(BASE)/docroot" go run main.go
+	@MASTERURL="$(MASTERURL)" KUBECONFIG="$(KUBECONFIG)" DOCROOT="$(BASE)/docroot" go run main.go
 
 image:
 	docker build --rm -t $(IMAGENAME):$(VERSION) $(BASE)

@@ -19,7 +19,7 @@ type KubeClient struct {
 	dynClient dynamic.Interface
 }
 
-func InitKubeClient(masterurl, kubeconfig string, openShift bool) (*KubeClient, error) {
+func InitKubeClient(masterurl, kubeconfig string) (*KubeClient, error) {
 	var (
 		cfg *rest.Config
 		err error
@@ -44,10 +44,12 @@ func InitKubeClient(masterurl, kubeconfig string, openShift bool) (*KubeClient, 
 		return nil, fmt.Errorf("error getting new dynamic client: %v", err)
 	}
 
-	return &KubeClient{
-		openShift: openShift,
-		dynClient: dynClient,
-	}, nil
+	kc := KubeClient{dynClient: dynClient}
+	kc.openShift = kc.runningOnOpenShift(context.Background())
+
+	log.Printf("running on OpenShift: %v", kc.openShift)
+
+	return &kc, nil
 }
 
 func (kc *KubeClient) GetAll(ctx context.Context, namespace string) (Graph, error) {
@@ -643,6 +645,14 @@ func (kc *KubeClient) getNamespaces(ctx context.Context) ([]Project, error) {
 	}
 
 	return all, nil
+}
+
+// if we get an error while trying to get routes, assume that we are not
+// runnin on OpenShift
+func (kc *KubeClient) runningOnOpenShift(ctx context.Context) bool {
+	_, err := kc.get(ctx, "route.openshift.io", "v1", "routes", "")
+
+	return err == nil
 }
 
 func (kc *KubeClient) get(ctx context.Context, g, v, r, namespace string) ([]unstructured.Unstructured, error) {
